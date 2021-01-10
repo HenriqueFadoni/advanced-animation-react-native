@@ -9,10 +9,13 @@ import {
   Text,
   View,
   StyleSheet,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
 import data, { detailsList, iconsByType } from './data';
 import { SimpleLineIcons } from '@expo/vector-icons';
+import { FlingGestureHandler, State, Directions } from 'react-native-gesture-handler'
+import { Transition, Transitioning } from 'react-native-reanimated';
+import posed, { Transition as PoseTransitions } from 'react-native-pose';
 
 const { width, height } = Dimensions.get('window');
 
@@ -125,42 +128,166 @@ const Details = ({ color, index }) => {
   )
 }
 
+const transition = (
+  <Transition.Together>
+    <Transition.Out
+      type='slide-bottom'
+      duration={DURATION}
+      interpolation='easeIn'
+    />
+    <Transition.Change />
+    <Transition.In
+      type='slide-bottom'
+      duration={DURATION}
+      interpolation='easeOut'
+    />
+  </Transition.Together>
+);
+
+const config = {
+  transition: {
+    type: 'tween',
+    duration: DURATION,
+    easing: Easing.elastic(0.9)
+  }
+}
+
+const PosedView = posed.View({
+  enter: {
+    opacity: 1,
+    rotate: '0deg',
+    ...config
+  },
+  exit: {
+    opacity: 0,
+    rotate: '180deg',
+    ...config
+  }
+})
+
 export default function App() {
+  const ref = React.useRef();
   const [index, setIndex] = React.useState(0);
   const color = index % 2 === 1 ? colors.lightText : colors.darkText;
   const headingColor = index % 2 === 1 ? colors.lightText : colors.darkText;
 
+  const activeIndex = React.useRef(new Animated.Value(0)).current;
+  const animation = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(animation, {
+      toValue: activeIndex,
+      duration: DURATION * 0.5,
+      useNativeDriver: true
+    }).start();
+
+    StatusBar.setBarStyle(index % 2 === 0 ? 'dark-content' : 'light-content', true);
+  });
+
+  const setActiveIndex = React.useCallback(newIndex => {
+    activeIndex.setValue(newIndex);
+    ref.current.animateNextTransition();
+    setIndex(newIndex);
+  });
+
+  const translateY = animation.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [height, 0, -height]
+  });
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={[
-        styles.imageContainer,
-        { borderColor: index % 2 === 0 ? colors.darkBg : colors.lightBg }
-      ]}>
-        <Image source={{ uri: data[index].image }} style={styles.image} />
-      </View>
-      <View
-        style={{
-          padding: 20,
-          flex: 1,
-          justifyContent: 'space-evenly'
+    <FlingGestureHandler
+      key="up"
+      direction={Directions.UP}
+      onHandlerStateChange={ev => {
+        if (ev.nativeEvent.state === State.END) {
+          if (index === data.length - 1) {
+            return;
+          }
+          setActiveIndex(index + 1)
+        }
+      }}
+    >
+      <FlingGestureHandler
+        key="down"
+        direction={Directions.DOWN}
+        onHandlerStateChange={ev => {
+          if (ev.nativeEvent.state === State.END) {
+            if (index === 0) {
+              return;
+            }
+            setActiveIndex(index - 1)
+          }
         }}
       >
-        <Title
-          color={headingColor}
-          index={index}
-          text={data[index].title}
-        />
-        <Details
-          color={color}
-          index={index}
-        />
-        <Description
-          index={index}
-          text={data[index].description}
-          color={headingColor}
-        />
-      </View>
-    </SafeAreaView>
+        <SafeAreaView style={styles.container}>
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                height: height * data.length,
+                transform: [{ translateY }]
+              }
+            ]}
+          >
+            {
+              data.map((_, i) => {
+                return (
+                  <View
+                    key={i}
+                    style={{
+                      height,
+                      backgroundColor: i % 2 === 0 ? colors.lightBg : colors.darkBg,
+                    }}
+                  ></View>
+                )
+              })
+            }
+          </Animated.View>
+          <PoseTransitions>
+            {index % 2 === 0 ? <PosedView
+              key='image0'
+              style={[
+                styles.imageContainer,
+                { borderColor: index % 2 === 0 ? colors.darkBg : colors.lightBg }
+              ]}>
+              <Image source={{ uri: data[index].image }} style={styles.image} />
+            </PosedView> : <PosedView
+              key='image1'
+              style={[
+                styles.imageContainer,
+                { borderColor: index % 2 === 0 ? colors.darkBg : colors.lightBg }
+              ]}>
+                <Image source={{ uri: data[index].image }} style={styles.image} />
+              </PosedView>}
+          </PoseTransitions>
+          <Transitioning.View
+            ref={ref}
+            transition={transition}
+            style={{
+              padding: 20,
+              flex: 1,
+              justifyContent: 'space-evenly'
+            }}
+          >
+            <Title
+              color={headingColor}
+              index={index}
+              text={data[index].title}
+            />
+            <Details
+              color={color}
+              index={index}
+            />
+            <Description
+              index={index}
+              text={data[index].description}
+              color={headingColor}
+            />
+          </Transitioning.View>
+        </SafeAreaView>
+      </FlingGestureHandler>
+    </FlingGestureHandler>
   );
 }
 
@@ -172,7 +299,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  imageContainer:{
+  imageContainer: {
     width: 400,
     height: 400,
     right: '-50%',
