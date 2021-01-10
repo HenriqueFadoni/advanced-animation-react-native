@@ -6,22 +6,21 @@ import {
   Animated,
   Image,
   Button,
-  Text,
   View,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import data, { detailsList, iconsByType } from './data';
-import { SimpleLineIcons } from '@expo/vector-icons';
+import data from './data';
 import { FlingGestureHandler, State, Directions } from 'react-native-gesture-handler'
 import { Transition, Transitioning } from 'react-native-reanimated';
 import posed, { Transition as PoseTransitions } from 'react-native-pose';
+import Title from './components/Title';
+import Description from './components/Description';
+import Details from './components/Details/Details';
 
 const { width, height } = Dimensions.get('window');
 
 const DURATION = 700;
-const TITLE_SIZE = 36;
-const SPACING = 80;
 const IMAGE_SIZE = width * 0.8;
 
 const colors = {
@@ -30,103 +29,6 @@ const colors = {
   lightText: '#E5E5DD',
   darkText: '#A5A6AA',
 };
-
-const Item = ({ children, style }) => {
-  return (
-    <View
-      style={[
-        {
-          justifyContent: 'center',
-          overflow: 'hidden',
-          backgroundColor: 'transparent'
-        },
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
-};
-
-const Icon = ({ type }) => {
-  return (
-    <SimpleLineIcons
-      name={type}
-      size={26}
-      color="#A5A6AA"
-      style={{
-        marginRight: 15,
-        height: 26
-      }}
-    />
-  );
-};
-
-const Description = ({ index, text, color }) => {
-  return (
-    <Item>
-      <Text
-        key={`description-${index}`}
-        style={{
-          fontSize: 16,
-          color
-        }}
-      >
-        {text}
-      </Text>
-    </Item>
-  );
-};
-
-const Title = ({ index, text, color }) => {
-  return (
-    <Item style={{ height: TITLE_SIZE * 3, justifyContent: 'flex-end' }}>
-      <Text
-        key={`title-${index}`}
-        style={{
-          fontSize: TITLE_SIZE,
-          fontWeight: '900',
-          color
-        }}
-      >
-        {text}
-      </Text>
-    </Item>
-  )
-}
-
-const Details = ({ color, index }) => {
-  return (
-    <View style={{ marginVertical: SPACING }}>
-      {detailsList.map(key => {
-        return (
-          <View
-            key={key}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 25,
-            }}
-          >
-            <Icon type={iconsByType[key]} />
-            <Item style={{
-              flex: 1,
-              height: 26,
-              justifyContent: 'center'
-            }}>
-              <Text
-                key={`${key}-${index}`}
-                style={{ fontSize: 16, color, fontWeight: '700' }}
-              >
-                {data[index][key]}
-              </Text>
-            </Item>
-          </View>
-        );
-      })}
-    </View>
-  )
-}
 
 const transition = (
   <Transition.Together>
